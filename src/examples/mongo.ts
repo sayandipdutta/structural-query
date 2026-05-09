@@ -58,8 +58,8 @@ const ResourcePermissionSchema = new Schema(
         permissions: {
             type: [{ type: String, enum: permissionValues }],
             required: true,
-            valiidator: {
-                validate: (permissions: Permission[]) => permissions.length > 0,
+            validate: {
+                validator: (permissions: Permission[]) => permissions.length > 0,
                 message: "At least one permission is required",
             },
         },
