@@ -21,7 +21,6 @@ const ResourceSchema = new Schema(
 
 // type ResourceBase = InferSchemaType<typeof ResourceSchema> & { resourceType: ResourceKind };
 
-export const ResourceModel = model<InferSchemaType<typeof ResourceSchema>>("Resource", ResourceSchema);
 
 const UserSchema = new Schema({ email: { type: String, required: true } });
 const GroupSchema = new Schema({ alias: { type: String } });
@@ -38,6 +37,8 @@ type Resource =
     | GroupResource
     | ProjectResource
     | OrganizationResource;
+
+export const ResourceModel = model<Resource>("Resource", ResourceSchema);
 
 export const UserModel = ResourceModel.discriminator<UserResource>("UserModel", UserSchema, "user");
 export const GroupModel = ResourceModel.discriminator<GroupResource>("GroupModel", GroupSchema, "group");
@@ -97,7 +98,7 @@ export type ResourceRef = InferSchemaType<typeof ResourceRefSchema>;
 type ResourcePermissionBase = InferSchemaType<typeof ResourcePermissionSchema>;
 export type ResourcePermission = ResourcePermissionBase & { sourceDoc?: Resource, targetDoc?: Resource };
 
-export const ResourcePermissionModel = model<ResourcePermission>("ResourcePermissions", ResourcePermissionSchema);
+export const ResourcePermissionModel = model<ResourcePermission>("ResourcePermission", ResourcePermissionSchema);
 
 async function reSourceResource() {
     await ResourceModel.deleteMany({});
@@ -146,7 +147,7 @@ async function describeRelationship() {
         const outgoingRelations = relations.filter(rel => rel.sourceDoc?.id === id);
         const incomingRelations = relations.filter(rel => rel.targetDoc?.id === id);
 
-        console.group(`outgoing relationships for id=${id}`)
+        console.group(`outgoing relationships for id=${id}`);
         if (outgoingRelations.length === 0) {
             console.log(`No outgoing relationships found!`);
         } else {
@@ -154,9 +155,9 @@ async function describeRelationship() {
                 console.log(`${orel.sourceResource.resourceType}(${orel.sourceDoc?.name ?? orel.sourceResource.id}) can [${orel.permissions}] to ${orel.targetResource.resourceType}(${orel.targetDoc?.name ?? orel.targetResource.id})`);
             }
         }
-        console.groupEnd()
+        console.groupEnd();
         console.log();
-        console.group(`incoming relationships for id=${id}`)
+        console.group(`incoming relationships for id=${id}`);
         if (incomingRelations.length === 0) {
             console.log(`No incoming relationships found!`);
         } else {
@@ -164,8 +165,29 @@ async function describeRelationship() {
                 console.log(`${irel.sourceResource.resourceType}(${irel.sourceDoc?.name ?? irel.sourceResource.id}) can [${irel.permissions}] to ${irel.targetResource.resourceType}(${irel.targetDoc?.name ?? irel.targetResource.id})`);
             }
         }
-        console.groupEnd()
+        console.groupEnd();
         console.log("--------");
+    }
+}
+
+export async function findByIdAndType(id: string, resourceType: ResourceKind) {
+    return await ResourcePermissionModel.find({
+        sourceResource: { id, resourceType }
+    })
+        .populate("targetDoc")
+        .lean<ResourcePermission[]>();
+}
+
+export async function printPolymorphicInformation(id: string) {
+    const resource = await ResourceModel.findOne({ id }).lean();
+
+    // correctness of fields are ensured at compile-time
+    switch (resource?.resourceType) {
+        case "user": console.log(`User email: ${resource.email}`); break;
+        case "group": console.log(`Group email: ${resource.alias}`); break;
+        case "project": console.log(`Project description: ${resource.description}`); break;
+        case "organization": console.log(`Org plan: ${resource.plan}`); break;
+        default: console.log("No resource found with this asset");
     }
 }
 
