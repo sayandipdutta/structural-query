@@ -91,7 +91,6 @@ ResourcePermissionSchema.virtual("targetDoc", {
     foreignField: "id",
     justOne: true,
 })
-ResourcePermissionSchema.set('toObject', { virtuals: true });
 
 
 export type ResourceRef = InferSchemaType<typeof ResourceRefSchema>;
